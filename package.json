@@ -1,7 +1,9 @@
 {
   "name": "data-source-helper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Mendix widget data source helper",
+  "main": "./dist/DataSourceHelper.js",
+  "types": "./dist/DataSourceHelper.d.ts",
   "scripts": {
     "start": "nodemon --watch webpack.config.js --watch tsconfig.json --exec \"npm run build:dev",
     "pretest": "npm run lint && npm run build",
