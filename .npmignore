@@ -1,0 +1,5 @@
+node_modules/
+dist/tsc/
+dist/__tests__
+dist/testresults
+.history
