@@ -47,12 +47,28 @@ export class DataSourceHelper {
     private widgetVersionRegister: {
         [version: string]: string[];
     } = {};
+    private dataSourceHelper: DataSourceHelper;
 
-    constructor(widget: ListView, widgetId: string) {
-        this.widget = widget;
-        this.widgetVersionRegister[`${this.version.major}`] = [ widgetId ];
-        this.compatibilityCheck();
-        this.showLoader();
+    constructor(targetNode: HTMLElement, widget: ListView, widgetId: string, version: Version) {
+        DataSourceHelper.hideContent(targetNode);
+        if (widget) {
+            this.addListView(widget);
+        }
+        this.dataSourceHelper = this.DSHelper(); // This is intentional so we can set the customWidgetDataSourceHelper incase its not initially set.
+
+        this.versionCompatibility = this.versionCompatibility.bind(this.dataSourceHelper);
+        this.versionCompatibility(version, widgetId);
+        this.setConstraint = this.setConstraint.bind(this.dataSourceHelper);
+        this.setSorting = this.setSorting.bind(this.dataSourceHelper);
+
+        return this.dataSourceHelper;
+    }
+
+    private DSHelper() {
+        if (!this.widget.__customWidgetDataSourceHelper) {
+            this.widget.__customWidgetDataSourceHelper = this;
+        }
+        return this.widget.__customWidgetDataSourceHelper;
     }
 
     setSorting(widgetId: string, sortConstraint: string[]) {
@@ -65,7 +81,15 @@ export class DataSourceHelper {
         this.registerUpdate();
     }
 
-    registerUpdate() {
+    addListView(widget: ListView) {
+        this.compatibilityCheck(widget);
+        this.widget = widget;
+        if (!this.widget.update) {
+            this.hideLoader(); // hide loader incase there's no update method eg when listview data is empty
+        }
+    }
+
+    private registerUpdate() {
         if (this.timeoutHandle) {
             window.clearTimeout(this.timeoutHandle);
         }
@@ -92,25 +116,25 @@ export class DataSourceHelper {
         });
     }
 
-    versionCompatibility(version: Version, widgetId: string): string {
+    private versionCompatibility(version: Version, widgetId: string) {
         this.widgetVersionRegister[`${version.major}`] = this.widgetVersionRegister[`${version.major}`] || [];
-        this.widgetVersionRegister[`${version.major}`].push(widgetId);
+        if (this.widgetVersionRegister[`${version.major}`].indexOf(widgetId) === -1) {
+            this.widgetVersionRegister[`${version.major}`].push(widgetId);
+        }
         const maxVersion = Math.max(...Object.keys(this.widgetVersionRegister).map(value => Number(value)));
 
         if (maxVersion !== version.major) {
             const widgetsToUpdate = { ...this.widgetVersionRegister };
             delete widgetsToUpdate[`${maxVersion}`];
-            const widgetsToUpdateList = Object.keys(widgetsToUpdate).map(key => widgetsToUpdate[key]).join(",");
+            const widgetsToUpdateList = Object.keys(widgetsToUpdate).map(key => widgetsToUpdate[key]).join(", ");
 
-            return `Update widgets: ${widgetsToUpdateList} to version ${maxVersion}`;
+            throw new Error(`Update version to '${maxVersion}' widgets: ${widgetsToUpdateList}`);
         }
-
-        return "";
     }
 
-    private compatibilityCheck() {
-        if (!(this.widget._datasource && this.widget._datasource._constraints !== undefined && this.widget._entity
-                && this.widget.update && this.widget.datasource.type)) {
+    private compatibilityCheck(widget: ListView) {
+        if (!(widget._datasource && widget._datasource._constraints !== undefined && widget._entity
+                && widget.update && widget.datasource.type)) {
             throw new Error("Mendix version is incompatible");
         }
     }
@@ -146,10 +170,12 @@ export class DataSourceHelper {
     static hideContent(targetNode: HTMLElement) {
         targetNode.classList.add("widget-data-source-helper-initial-loading");
     }
+    static showContent(targetNode: HTMLElement) {
+        targetNode.classList.remove("widget-data-source-helper-initial-loading");
+    }
 
     private hideLoader() {
         this.widget.domNode.classList.remove("widget-data-source-helper-loading");
         this.widget.domNode.classList.remove("widget-data-source-helper-initial-loading");
     }
-
 }
