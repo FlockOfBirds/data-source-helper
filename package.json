@@ -1,5 +1,5 @@
 {
-  "name": "data-source-helper",
+  "name": "mendix-data-source-helper",
   "version": "0.1.2",
   "description": "Mendix widget data source helper",
   "main": "./dist/DataSourceHelper.js",
