@@ -1,5 +1,5 @@
 # data-source-helper
-Mendix widget data source helper
+The Mendix widget data source helper module assists with applying multiple restrictions (coming from custom widgets ) onto the mendix data containers (eg: list-view)
 
 #Usage.
 
@@ -12,7 +12,7 @@ npm install --save mendix-data-source-helper
 ```
 import DataSourceHelper from "DataSourceHelper"
 ```
-* Initialize the dataSourceHelper once you've a listview
+* Initialize the dataSourceHelper once you have a listview
 ```
 try {
     this.dataSourceHelper = new DataSourceHelper(targetNode, ListView, this.props.friendlyId, DataSourceHelper.VERSION)
