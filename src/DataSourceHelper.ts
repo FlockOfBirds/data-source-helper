@@ -55,7 +55,6 @@ export class DataSourceHelper {
             this.addListView(widget);
         }
         this.dataSourceHelper = this.DSHelper(); // This is intentional so we can set the customWidgetDataSourceHelper incase its not initially set.
-
         this.versionCompatibility = this.versionCompatibility.bind(this.dataSourceHelper);
         this.versionCompatibility(version, widgetId);
         this.setConstraint = this.setConstraint.bind(this.dataSourceHelper);
@@ -68,6 +67,7 @@ export class DataSourceHelper {
         if (!this.widget.__customWidgetDataSourceHelper) {
             this.widget.__customWidgetDataSourceHelper = this;
         }
+
         return this.widget.__customWidgetDataSourceHelper;
     }
 
@@ -133,7 +133,7 @@ export class DataSourceHelper {
     }
 
     private compatibilityCheck(widget: ListView) {
-        if (!(widget._datasource && widget._datasource._constraints !== undefined && widget._entity
+        if (!(widget._datasource && (widget._datasource._constraints !== undefined) && widget._entity
                 && widget.update && widget.datasource.type)) {
             throw new Error("Mendix version is incompatible");
         }
