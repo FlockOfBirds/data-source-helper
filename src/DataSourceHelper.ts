@@ -47,28 +47,19 @@ export class DataSourceHelper {
     private widgetVersionRegister: {
         [version: string]: string[];
     } = {};
-    private dataSourceHelper: DataSourceHelper;
 
-    constructor(targetNode: HTMLElement, widget: ListView, widgetId: string, version: Version) {
-        DataSourceHelper.hideContent(targetNode);
-        if (widget) {
-            this.addListView(widget);
-        }
-        this.dataSourceHelper = this.DSHelper(); // This is intentional so we can set the customWidgetDataSourceHelper incase its not initially set.
-        this.versionCompatibility = this.versionCompatibility.bind(this.dataSourceHelper);
-        this.versionCompatibility(version, widgetId);
-        this.setConstraint = this.setConstraint.bind(this.dataSourceHelper);
-        this.setSorting = this.setSorting.bind(this.dataSourceHelper);
-
-        return this.dataSourceHelper;
+    constructor(widget: ListView) {
+        this.compatibilityCheck(widget);
+        this.widget = widget;
     }
 
-    private DSHelper() {
-        if (!this.widget.__customWidgetDataSourceHelper) {
-            this.widget.__customWidgetDataSourceHelper = this;
+    static getInstance(widget: ListView, widgetId: string, version: Version) {
+        if (!widget.__customWidgetDataSourceHelper) {
+            widget.__customWidgetDataSourceHelper = new DataSourceHelper(widget);
         }
+        widget.__customWidgetDataSourceHelper.versionCompatibility(version, widgetId);
 
-        return this.widget.__customWidgetDataSourceHelper;
+        return widget.__customWidgetDataSourceHelper;
     }
 
     setSorting(widgetId: string, sortConstraint: string[]) {
@@ -79,14 +70,6 @@ export class DataSourceHelper {
     setConstraint(widgetId: string, constraint: string | OfflineConstraint) {
         this.store.constraints[widgetId] = constraint as string | OfflineConstraint;
         this.registerUpdate();
-    }
-
-    addListView(widget: ListView) {
-        this.compatibilityCheck(widget);
-        this.widget = widget;
-        if (!this.widget.update) {
-            this.hideLoader(); // hide loader incase there's no update method eg when listview data is empty
-        }
     }
 
     private registerUpdate() {
@@ -128,7 +111,8 @@ export class DataSourceHelper {
             delete widgetsToUpdate[`${maxVersion}`];
             const widgetsToUpdateList = Object.keys(widgetsToUpdate).map(key => widgetsToUpdate[key]).join(", ");
 
-            throw new Error(`Update version to '${maxVersion}' widgets: ${widgetsToUpdateList}`);
+            logger.error(`Update version to '${maxVersion}' for widgets: ${widgetsToUpdateList}`);
+            throw new Error(`This widget is not compatible with: ${widgetsToUpdateList}, please update them from the App Store`);
         }
     }
 
@@ -167,15 +151,20 @@ export class DataSourceHelper {
         this.widget.domNode.classList.add("widget-data-source-helper-loading");
     }
 
-    static hideContent(targetNode: HTMLElement) {
-        targetNode.classList.add("widget-data-source-helper-initial-loading");
+    static hideContent(targetNode?: HTMLElement) {
+        if (targetNode) {
+            targetNode.classList.add("widget-data-source-helper-initial-loading");
+        }
     }
-    static showContent(targetNode: HTMLElement) {
-        targetNode.classList.remove("widget-data-source-helper-initial-loading");
+
+    static showContent(targetNode?: HTMLElement) {
+        if (targetNode) {
+            targetNode.classList.remove("widget-data-source-helper-initial-loading");
+        }
     }
 
     private hideLoader() {
         this.widget.domNode.classList.remove("widget-data-source-helper-loading");
-        this.widget.domNode.classList.remove("widget-data-source-helper-initial-loading");
+        DataSourceHelper.showContent(this.widget.domNode);
     }
 }
