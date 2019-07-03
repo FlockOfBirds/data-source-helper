@@ -48,11 +48,18 @@ export class DataSourceHelper {
         [version: string]: string[];
     } = {};
 
-    constructor(widget: ListView, widgetId: string) {
+    constructor(widget: ListView) {
+        this.compatibilityCheck(widget);
         this.widget = widget;
-        this.widgetVersionRegister[`${this.version.major}`] = [ widgetId ];
-        this.compatibilityCheck();
-        this.showLoader();
+    }
+
+    static getInstance(widget: ListView, widgetId: string, version: Version) {
+        if (!widget.__customWidgetDataSourceHelper) {
+            widget.__customWidgetDataSourceHelper = new DataSourceHelper(widget);
+        }
+        widget.__customWidgetDataSourceHelper.versionCompatibility(version, widgetId);
+
+        return widget.__customWidgetDataSourceHelper;
     }
 
     setSorting(widgetId: string, sortConstraint: string[]) {
@@ -65,7 +72,7 @@ export class DataSourceHelper {
         this.registerUpdate();
     }
 
-    registerUpdate() {
+    private registerUpdate() {
         if (this.timeoutHandle) {
             window.clearTimeout(this.timeoutHandle);
         }
@@ -92,25 +99,26 @@ export class DataSourceHelper {
         });
     }
 
-    versionCompatibility(version: Version, widgetId: string): string {
+    private versionCompatibility(version: Version, widgetId: string) {
         this.widgetVersionRegister[`${version.major}`] = this.widgetVersionRegister[`${version.major}`] || [];
-        this.widgetVersionRegister[`${version.major}`].push(widgetId);
+        if (this.widgetVersionRegister[`${version.major}`].indexOf(widgetId) === -1) {
+            this.widgetVersionRegister[`${version.major}`].push(widgetId);
+        }
         const maxVersion = Math.max(...Object.keys(this.widgetVersionRegister).map(value => Number(value)));
 
         if (maxVersion !== version.major) {
             const widgetsToUpdate = { ...this.widgetVersionRegister };
             delete widgetsToUpdate[`${maxVersion}`];
-            const widgetsToUpdateList = Object.keys(widgetsToUpdate).map(key => widgetsToUpdate[key]).join(",");
+            const widgetsToUpdateList = Object.keys(widgetsToUpdate).map(key => widgetsToUpdate[key]).join(", ");
 
-            return `Update widgets: ${widgetsToUpdateList} to version ${maxVersion}`;
+            logger.error(`Update version to '${maxVersion}' for widgets: ${widgetsToUpdateList}`);
+            throw new Error(`This widget is not compatible with: ${widgetsToUpdateList}, please update them from the App Store`);
         }
-
-        return "";
     }
 
-    private compatibilityCheck() {
-        if (!(this.widget._datasource && this.widget._datasource._constraints !== undefined && this.widget._entity
-                && this.widget.update && this.widget.datasource.type)) {
+    private compatibilityCheck(widget: ListView) {
+        if (!(widget._datasource && (widget._datasource._constraints !== undefined) && widget._entity
+                && widget.update && widget.datasource.type)) {
             throw new Error("Mendix version is incompatible");
         }
     }
@@ -143,13 +151,20 @@ export class DataSourceHelper {
         this.widget.domNode.classList.add("widget-data-source-helper-loading");
     }
 
-    static hideContent(targetNode: HTMLElement) {
-        targetNode.classList.add("widget-data-source-helper-initial-loading");
+    static hideContent(targetNode?: HTMLElement) {
+        if (targetNode) {
+            targetNode.classList.add("widget-data-source-helper-initial-loading");
+        }
+    }
+
+    static showContent(targetNode?: HTMLElement) {
+        if (targetNode) {
+            targetNode.classList.remove("widget-data-source-helper-initial-loading");
+        }
     }
 
     private hideLoader() {
         this.widget.domNode.classList.remove("widget-data-source-helper-loading");
-        this.widget.domNode.classList.remove("widget-data-source-helper-initial-loading");
+        DataSourceHelper.showContent(this.widget.domNode);
     }
-
 }
